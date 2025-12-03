@@ -44,6 +44,9 @@ function init() {
     const row = event.target.closest('.query-row');
     if (!row) return;
     const field = event.target.name;
+    if (field === 'value') {
+      autoResize(event.target);
+    }
     updateQueryRow(row.dataset.id, field, event.target.value);
   });
 
@@ -121,9 +124,10 @@ function renderQueryRows(focusIndex = null) {
     const node = queryTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.id = row.id;
     const keyInput = node.querySelector("input[name='key']");
-    const valueInput = node.querySelector("input[name='value']");
+    const valueInput = node.querySelector("textarea[name='value']");
     keyInput.value = row.key;
     valueInput.value = row.value;
+    autoResize(valueInput);
     fragment.appendChild(node);
   });
   queryList.appendChild(fragment);
@@ -167,6 +171,12 @@ function updateQueryRow(id, field, value) {
   if (!target) return;
   target[field] = value;
   rebuildUrlFromState();
+}
+
+function autoResize(element) {
+  if (!element) return;
+  element.style.height = 'auto';
+  element.style.height = `${element.scrollHeight}px`;
 }
 
 function removeQueryRow(id) {
