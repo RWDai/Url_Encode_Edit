@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>URL 编码双向编辑器</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <p class="eyebrow">GitHub Pages · URL Encode/Decode</p>
+        <h1>URL 编码双向编辑器</h1>
+        <p class="lede">
+          输入任意 URL 编码后的字符串，自动解码成最小单元，并可逐个修改。
+          修改任意单元后，会立即反向编码并同步到上方输入框，实现实时双向绑定。
+        </p>
+      </header>
+
+      <section class="panel">
+        <label class="field-label" for="encodedInput">URL 编码内容</label>
+        <textarea
+          id="encodedInput"
+          class="encoded-input"
+          spellcheck="false"
+          placeholder="例如：%E4%BD%A0%E5%A5%BD%20World%F0%9F%98%8A"
+          aria-describedby="statusLine"
+        ></textarea>
+        <div id="statusLine" class="status-line" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>解码后的最小单元</h2>
+            <p class="muted">逐个编辑下方字符，编码内容将自动更新。</p>
+          </div>
+          <output id="tokenCount" class="muted" for="tokens">0 个单元</output>
+        </div>
+        <div id="tokens" class="tokens-grid" aria-live="polite" aria-label="解码字符列表"></div>
+        <button id="appendToken" class="ghost-btn" type="button">新增空白单元</button>
+      </section>
+    </main>
+
+    <template id="tokenTemplate">
+      <input class="token" type="text" inputmode="text" aria-label="解码字符单元" />
+    </template>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
