@@ -27,7 +27,8 @@
     border-color: var(--border-dark);
   }
   .encoded-input,
-  .token {
+  .query-input,
+  .base-grid input {
     background: rgba(15, 23, 42, 0.6);
     border-color: var(--border-dark);
     color: var(--text-dark);
@@ -106,7 +107,7 @@ h2 {
 
 .encoded-input {
   width: 100%;
-  min-height: 140px;
+  min-height: 120px;
   border-radius: 12px;
   border: 1px solid var(--border);
   padding: 1rem 1.25rem;
@@ -129,9 +130,9 @@ h2 {
 .panel-heading {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .muted {
@@ -139,41 +140,83 @@ h2 {
   font-size: 0.9rem;
 }
 
-.tokens-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  padding: 1rem;
-  border-radius: 16px;
-  border: 1px dashed var(--border);
-  min-height: 72px;
+.base-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
 }
 
-.tokens-grid:empty::after {
-  content: '等待解析结果…';
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.field-group input {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 0.8rem 0.9rem;
+  font-size: 1rem;
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+.path-field {
+  grid-column: 1 / -1;
+}
+
+.query-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 56px;
+}
+
+.query-list:empty::after {
+  content: '还没有 Query 参数';
   color: var(--muted);
   font-size: 0.95rem;
 }
 
-.token {
-  width: 52px;
-  padding: 0.65rem 0.5rem;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  text-align: center;
-  font-size: 1.1rem;
-  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.query-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
 }
 
-.token:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+.query-input {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.95rem;
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+.eq {
+  font-size: 1.25rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.05);
+  color: #dc2626;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
 }
 
 .ghost-btn {
-  margin-top: 1rem;
   padding: 0.65rem 1.1rem;
   border-radius: 999px;
   border: 1px dashed var(--accent);
@@ -188,10 +231,24 @@ h2 {
 }
 
 @media (max-width: 640px) {
-  .tokens-grid {
-    justify-content: center;
+  .query-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      'key key'
+      'value value'
+      'btn btn';
   }
-  .token {
-    flex: 0 0 calc(25% - 0.75rem);
+  .query-row .eq {
+    display: none;
+  }
+  .query-row .query-input[name='key'] {
+    grid-area: key;
+  }
+  .query-row .query-input[name='value'] {
+    grid-area: value;
+  }
+  .query-row .icon-btn {
+    grid-area: btn;
+    justify-self: flex-end;
   }
 }

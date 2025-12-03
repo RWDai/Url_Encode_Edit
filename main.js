@@ -1,133 +1,212 @@
-const encodedInput = document.querySelector('#encodedInput');
-const tokensContainer = document.querySelector('#tokens');
+const urlInput = document.querySelector('#urlInput');
 const statusLine = document.querySelector('#statusLine');
-const tokenCount = document.querySelector('#tokenCount');
-const appendBtn = document.querySelector('#appendToken');
-const tokenTemplate = document.querySelector('#tokenTemplate');
+const queryList = document.querySelector('#queryList');
+const queryTemplate = document.querySelector('#queryRowTemplate');
+const queryCount = document.querySelector('#queryCount');
+const addQueryBtn = document.querySelector('#addQuery');
+const resetBtn = document.querySelector('#resetSample');
+const baseFields = document.querySelectorAll('[data-field]');
 
-let tokens = [];
+const SAMPLE_URL = 'https://demo.example.com:8443/sub?target=clash&mode=fast';
 
-const SAMPLE = '%E4%BD%A0%E5%A5%BD%20World%F0%9F%98%8A';
+const state = {
+  protocol: 'https',
+  hostname: '',
+  port: '',
+  pathname: '/',
+  query: [],
+};
+
+let nextQueryId = 0;
 
 init();
 
 function init() {
-  encodedInput.value = SAMPLE;
-  syncFromEncoded(SAMPLE);
-  encodedInput.addEventListener('input', (event) => {
-    syncFromEncoded(event.target.value);
+  resetBtn.addEventListener('click', () => {
+    urlInput.value = SAMPLE_URL;
+    syncFromUrlInput(SAMPLE_URL);
   });
 
-  tokensContainer.addEventListener('input', handleTokenInput);
-  tokensContainer.addEventListener('keydown', handleTokenKeydown);
-  tokensContainer.addEventListener('focusin', (event) => {
-    if (event.target.classList.contains('token')) {
-      event.target.select();
-    }
+  urlInput.addEventListener('input', (event) => {
+    syncFromUrlInput(event.target.value);
   });
 
-  appendBtn.addEventListener('click', () => {
-    tokens.push('');
-    renderTokens(tokens.length - 1);
-    updateEncodedFromTokens();
+  baseFields.forEach((field) => {
+    field.addEventListener('input', () => {
+      const key = field.dataset.field;
+      state[key] = field.value;
+      rebuildUrlFromState();
+    });
   });
+
+  queryList.addEventListener('input', (event) => {
+    if (!event.target.classList.contains('query-input')) return;
+    const row = event.target.closest('.query-row');
+    if (!row) return;
+    const field = event.target.name;
+    updateQueryRow(row.dataset.id, field, event.target.value);
+  });
+
+  queryList.addEventListener('click', (event) => {
+    const deleteBtn = event.target.closest('.icon-btn');
+    if (!deleteBtn) return;
+    const row = deleteBtn.closest('.query-row');
+    removeQueryRow(row.dataset.id);
+  });
+
+  addQueryBtn.addEventListener('click', () => {
+    addQueryRow();
+    renderQueryRows(state.query.length - 1);
+    rebuildUrlFromState();
+  });
+
+  // 初始化示例
+  urlInput.value = SAMPLE_URL;
+  syncFromUrlInput(SAMPLE_URL);
 }
 
-function syncFromEncoded(encodedValue) {
-  if (encodedValue.length === 0) {
-    tokens = [];
-    renderTokens();
-    updateStatus('请输入 URL 编码内容');
+function syncFromUrlInput(rawValue) {
+  const trimmed = rawValue.trim();
+  if (!trimmed) {
+    updateStatus('请输入完整的 URL');
     return;
   }
 
-  const normalized = encodedValue;
+  const { prepared, inferredProtocol } = prepareUrl(trimmed);
+
   try {
-    const decoded = decodeURIComponent(normalized);
-    tokens = Array.from(decoded);
-    renderTokens();
-    updateStatus(`已解析 ${tokens.length} 个单元`);
+    const parsed = new URL(prepared);
+    populateState(parsed);
+    renderBaseFields();
+    renderQueryRows();
+    urlInput.value = parsed.toString();
+    const info = inferredProtocol
+      ? '已自动补全 https:// 并解析 URL'
+      : `已解析 ${state.query.length} 个 Query 参数`;
+    updateStatus(info);
   } catch (error) {
-    const hint = error instanceof URIError ? '请检查 % 后是否紧跟两个十六进制字符。' : '';
-    updateStatus(`无法解码：${error.message}。${hint}`, true);
+    updateStatus(`无法解析 URL：${error.message}`, true);
   }
+}
+
+function prepareUrl(value) {
+  const hasProtocol = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(value);
+  if (hasProtocol) {
+    return { prepared: value, inferredProtocol: false };
+  }
+  return { prepared: `https://${value}`, inferredProtocol: true };
+}
+
+function populateState(url) {
+  state.protocol = url.protocol.replace(/:$/, '') || 'https';
+  state.hostname = url.hostname;
+  state.port = url.port;
+  state.pathname = safeDecodePath(url.pathname);
+  state.query = Array.from(url.searchParams.entries()).map(([key, value]) =>
+    createQueryRow(key, value)
+  );
+}
+
+function renderBaseFields() {
+  document.querySelector('#protocolField').value = state.protocol;
+  document.querySelector('#hostnameField').value = state.hostname;
+  document.querySelector('#portField').value = state.port;
+  document.querySelector('#pathnameField').value = state.pathname;
+}
+
+function renderQueryRows(focusIndex = null) {
+  queryList.innerHTML = '';
+  const fragment = document.createDocumentFragment();
+  state.query.forEach((row) => {
+    const node = queryTemplate.content.firstElementChild.cloneNode(true);
+    node.dataset.id = row.id;
+    const keyInput = node.querySelector("input[name='key']");
+    const valueInput = node.querySelector("input[name='value']");
+    keyInput.value = row.key;
+    valueInput.value = row.value;
+    fragment.appendChild(node);
+  });
+  queryList.appendChild(fragment);
+  queryCount.value = `${state.query.length} 个参数`;
+
+  if (focusIndex != null) {
+    const target = queryList.children[focusIndex];
+    if (target) {
+      const keyInput = target.querySelector("input[name='key']");
+      requestAnimationFrame(() => keyInput?.focus());
+    }
+  }
+}
+
+function rebuildUrlFromState() {
+  const hostname = state.hostname.trim();
+  if (!hostname) {
+    updateStatus('域名不能为空', true);
+    return;
+  }
+
+  try {
+    const protocol = sanitizeProtocol(state.protocol);
+    const base = new URL(`${protocol}://${hostname}`);
+    base.port = state.port.trim();
+    base.pathname = sanitizePath(state.pathname);
+    base.search = '';
+    state.query.forEach(({ key, value }) => {
+      if (!key && !value) return;
+      base.searchParams.append(key, value);
+    });
+    urlInput.value = base.toString();
+    updateStatus(`已同步 ${state.query.length} 个参数`);
+  } catch (error) {
+    updateStatus(`无法生成 URL：${error.message}`, true);
+  }
+}
+
+function updateQueryRow(id, field, value) {
+  const target = state.query.find((row) => row.id === id);
+  if (!target) return;
+  target[field] = value;
+  rebuildUrlFromState();
+}
+
+function removeQueryRow(id) {
+  const index = state.query.findIndex((row) => row.id === id);
+  if (index === -1) return;
+  state.query.splice(index, 1);
+  renderQueryRows();
+  rebuildUrlFromState();
+}
+
+function addQueryRow(key = '', value = '') {
+  state.query.push(createQueryRow(key, value));
+}
+
+function createQueryRow(key = '', value = '') {
+  return { id: `q-${nextQueryId++}`, key, value };
+}
+
+function safeDecodePath(pathname) {
+  if (!pathname) return '/';
+  try {
+    return decodeURI(pathname) || '/';
+  } catch (error) {
+    return pathname;
+  }
+}
+
+function sanitizePath(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return '/';
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+}
+
+function sanitizeProtocol(value) {
+  const fallback = 'https';
+  if (!value) return fallback;
+  return value.replace(/:$/, '').trim() || fallback;
 }
 
 function updateStatus(message, isError = false) {
   statusLine.textContent = message;
   statusLine.classList.toggle('error', Boolean(isError));
-}
-
-function renderTokens(focusIndex = null) {
-  tokensContainer.innerHTML = '';
-  const fragment = document.createDocumentFragment();
-
-  tokens.forEach((char, index) => {
-    const tokenNode = tokenTemplate.content.firstElementChild.cloneNode(true);
-    tokenNode.value = char;
-    tokenNode.dataset.index = index;
-    fragment.appendChild(tokenNode);
-  });
-
-  tokensContainer.appendChild(fragment);
-  tokenCount.value = `${tokens.length} 个单元`;
-
-  if (focusIndex !== null) {
-    requestAnimationFrame(() => focusToken(focusIndex));
-  }
-}
-
-function updateEncodedFromTokens() {
-  const rebuilt = tokens.map((char) => encodeURIComponent(char)).join('');
-
-  encodedInput.value = rebuilt;
-  updateStatus(`已同步 ${tokens.length} 个单元`);
-}
-
-function handleTokenInput(event) {
-  const input = event.target;
-  if (!input.classList.contains('token')) return;
-  const index = Number(input.dataset.index);
-  const chars = Array.from(input.value);
-
-  let focusIndex = index;
-
-  if (chars.length === 0) {
-    tokens.splice(index, 1);
-    focusIndex = Math.max(0, index - 1);
-  } else {
-    tokens.splice(index, 1, ...chars);
-    focusIndex = index + chars.length - 1;
-  }
-
-  renderTokens(focusIndex);
-  updateEncodedFromTokens();
-}
-
-function handleTokenKeydown(event) {
-  const input = event.target;
-  if (!input.classList.contains('token')) return;
-  const index = Number(input.dataset.index);
-
-  if (event.key === 'ArrowLeft' && input.selectionStart === 0 && index > 0) {
-    event.preventDefault();
-    focusToken(index - 1, 'end');
-  }
-
-  if (
-    event.key === 'ArrowRight' &&
-    input.selectionStart === input.value.length &&
-    index < tokens.length - 1
-  ) {
-    event.preventDefault();
-    focusToken(index + 1, 'start');
-  }
-}
-
-function focusToken(index, position = 'start') {
-  const target = tokensContainer.querySelector(`[data-index="${index}"]`);
-  if (!target) return;
-  target.focus();
-  const caret = position === 'end' ? target.value.length : 0;
-  target.setSelectionRange(caret, caret);
 }
