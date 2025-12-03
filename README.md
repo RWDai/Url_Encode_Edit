@@ -15,7 +15,7 @@
 
 1. 克隆或下载本仓库。
 2. 双击 `index.html` 或使用任意静态服务器（如 `npx serve .`）打开。
-3. 粘贴 URL，例如 `https://demo.example.com:8443/sub?target=clash&mode=fast`，立即得到结构化视图。
+3. 粘贴 URL，例如 `https://demo.example.com:8443/api/%E8%B5%84%E6%BA%90?name=%E5%BC%A0%E4%B8%89&description=%F0%9F%93%88+Docs&redirect=https%3A%2F%2Fexample.org%2Fcallback`，立即得到结构化视图。
 
 ## 主要交互
 

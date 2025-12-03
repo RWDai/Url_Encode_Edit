@@ -7,7 +7,8 @@ const addQueryBtn = document.querySelector('#addQuery');
 const resetBtn = document.querySelector('#resetSample');
 const baseFields = document.querySelectorAll('[data-field]');
 
-const SAMPLE_URL = 'https://demo.example.com:8443/sub?target=clash&mode=fast';
+const SAMPLE_URL =
+  'https://demo.example.com:8443/api/%E8%B5%84%E6%BA%90?name=%E5%BC%A0%E4%B8%89&description=%F0%9F%93%88+Docs&token=abc123&redirect=https%3A%2F%2Fexample.org%2Fcallback&note=Hello%20World%20%F0%9F%9A%80';
 
 const state = {
   protocol: 'https',
